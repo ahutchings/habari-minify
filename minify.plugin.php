@@ -102,17 +102,45 @@ class HabariMinify extends Plugin
 
                 return $out;
             case 'admin_header_javascript':
+            case 'admin_footer_javascript':
             case 'template_header_javascript':
+            case 'template_footer_javascript':
+                $minified = array();
                 $files = array();
 
-                foreach ($stack as $file) {
-                    $files[] = str_replace(Site::get_url('habari'), '', $file);
+                foreach ($stack as $key => $element) {
+                    if (self::can_minify($element)) {
+                        $files[] = str_replace(Site::get_url('habari'), '', $element);
+                    } else {
+                        if (count($files)) {
+                            $minified["minify-before-$key"] = Site::get_url('habari') . '/m/?f=' . implode(',', $files);
+                            $files = array();
+                        }
+
+                        $minified[$key] = $element;
+                    }
                 }
 
-                return array('minified' => Site::get_url('habari') . '/m/?f=' . implode(',', $files));
+                if (count($files)) {
+                    $minified["minify-last"] = Site::get_url('habari') . '/m/?f=' . implode(',', $files);
+                }
+
+                return $minified;
             default:
                 return $stack;
         }
+    }
+
+    /**
+     * Returns true if the element is a valid, locally-hosted URL.
+     *
+     * @param string $element Stack element
+     * @return bool
+     */
+    public static function can_minify($element)
+    {
+        return filter_var($element, FILTER_VALIDATE_URL) !== FALSE
+            && strpos($element, Site::get_url('habari')) === 0;
     }
 
     public function action_plugin_act_do_minify($handler)
