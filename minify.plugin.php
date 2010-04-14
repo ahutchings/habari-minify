@@ -87,20 +87,58 @@ class HabariMinify extends Plugin
         switch ($stack_name) {
             case 'admin_stylesheet':
             case 'template_stylesheet':
-                $media = array();
-                $out = array();
+                $by_type   = array();
+                $internals = array();
 
-                foreach ($stack as $item) {
-                    $media[$item[1]][] = str_replace(Site::get_url('habari'), '', $item[0]);
+                // group by media type
+                foreach ($stack as $key => $item) {
+                    if (self::is_url($item[0])) {
+                        $by_type[$item[1]][$key] = $item[0];
+                    } else {
+                        // internal stylesheets can not be minified and can be
+                        // output after all other stylesheets
+                        $internals[$key] = $item;
+                    }
                 }
 
-                $types = array_keys($media);
+                // filtered stack
+                $minified = array();
 
-                for ($i = 0; $i < count($media); $i++) {
-                    $out[$types[$i]] = array(Site::get_url('habari') . '/m/?f=' . implode(',', $media[$types[$i]]), $types[$i]);
+                // stylesheets to be minified together
+                $files = array();
+
+                foreach (array_keys($by_type) as $type) {
+                    foreach ($by_type[$type] as $name => $file) {
+                        if (self::can_minify($file)) {
+                            $files[] = str_replace(Site::get_url('habari'), '', $file);
+                        } else {
+                            // flush anything in the files array to the filtered stack
+                            if (count($files)) {
+                                $minified["minified-before-$name"] = array(
+                                    Site::get_url('habari') . '/m/?f=' . implode(',', $files),
+                                    $type
+                                );
+                                $files = array();
+                            }
+
+                            // add the current element to the filtered stack
+                            $minified[$name] = array($file, $type);
+                        }
+                    }
+
+                    // flush anything in the files array to the filtered stack
+                    if (count($files)) {
+                        $minified["minified-$type-last"] = array(
+                            Site::get_url('habari') . '/m/?f=' . implode(',', $files),
+                            $type
+                        );
+                    }
                 }
 
-                return $out;
+                // merge internal styles with the filtered stack
+                $minified = array_merge($minified, $internals);
+
+                return $minified;
             case 'admin_header_javascript':
             case 'admin_footer_javascript':
             case 'template_header_javascript':
@@ -113,7 +151,7 @@ class HabariMinify extends Plugin
                         $files[] = str_replace(Site::get_url('habari'), '', $element);
                     } else {
                         if (count($files)) {
-                            $minified["minify-before-$key"] = Site::get_url('habari') . '/m/?f=' . implode(',', $files);
+                            $minified["minified-before-$key"] = Site::get_url('habari') . '/m/?f=' . implode(',', $files);
                             $files = array();
                         }
 
@@ -122,7 +160,7 @@ class HabariMinify extends Plugin
                 }
 
                 if (count($files)) {
-                    $minified["minify-last"] = Site::get_url('habari') . '/m/?f=' . implode(',', $files);
+                    $minified["minified-last"] = Site::get_url('habari') . '/m/?f=' . implode(',', $files);
                 }
 
                 return $minified;
@@ -139,8 +177,19 @@ class HabariMinify extends Plugin
      */
     public static function can_minify($element)
     {
-        return filter_var($element, FILTER_VALIDATE_URL) !== FALSE
+        return self::is_url($element)
             && strpos($element, Site::get_url('habari')) === 0;
+    }
+
+    /**
+     * Returns true if the element is a valid URL.
+     *
+     * @param string $element Stack element
+     * @return bool
+     */
+    public static function is_url($element)
+    {
+        return filter_var($element, FILTER_VALIDATE_URL) !== FALSE;
     }
 
     public function action_plugin_act_do_minify($handler)
