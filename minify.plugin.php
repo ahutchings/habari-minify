@@ -5,14 +5,14 @@ class HabariMinify extends Plugin
     public function info()
     {
         return array(
-            'url' => 'http://andrewhutchings.com/projects',
+            'url' => 'http://github.com/ahutchings/habari-minify',
             'name' => 'Minify',
             'description' => 'Combines, minifies, and caches JavaScript and CSS
                 on demand to speed up page loads.',
             'license' => 'Apache License 2.0',
             'author' => 'Andrew Hutchings',
             'authorurl' => 'http://andrewhutchings.com',
-            'version' => '0.0.8'
+            'version' => '0.0.9'
         );
     }
 
@@ -21,7 +21,7 @@ class HabariMinify extends Plugin
         Update::add('Minify', 'F269AB4C-301E-11DE-9B02-636E56D89593', $this->info->version);
     }
 
-    public function filter_plugin_config($actions, $plugin_id)
+    public function filter_plugin_config( $actions, $plugin_id )
     {
         if ($plugin_id == $this->plugin_id()) {
             $actions[] = _t('Configure');
@@ -31,7 +31,7 @@ class HabariMinify extends Plugin
         return $actions;
     }
 
-    public function action_plugin_ui($plugin_id, $action)
+    public function action_plugin_ui( $plugin_id, $action )
     {
         if ( $plugin_id == $this->plugin_id() ) {
             switch ($action) {
@@ -50,7 +50,7 @@ class HabariMinify extends Plugin
                         $message = _t('Unable to clear the Minify cache.');
                     }
 
-                    printf("<p>%s</p>", $message);
+                    printf('<p>%s</p>', $message);
                     break;
             }
         }
@@ -67,8 +67,8 @@ class HabariMinify extends Plugin
         $files   = glob($pattern);
         $count   = count($files);
 
-        if ($count == 0) {
-            return true;
+        if ($count === 0) {
+            return TRUE;
         }
 
         foreach ($files as $file) {
@@ -78,9 +78,9 @@ class HabariMinify extends Plugin
         return $count !== count(glob($pattern));
     }
 
-    public function filter_stack_out($stack, $stack_name, $filter)
+    public function filter_stack_out( $stack, $stack_name, $filter )
     {
-        if (count($stack) == 0) {
+        if (count($stack) === 0) {
             return $stack;
         }
 
@@ -175,7 +175,7 @@ class HabariMinify extends Plugin
      * @param string $element Stack element
      * @return bool
      */
-    public static function can_minify($element)
+    public static function can_minify( $element )
     {
         return self::is_url($element)
             && strpos($element, Site::get_url('habari')) === 0;
@@ -187,12 +187,12 @@ class HabariMinify extends Plugin
      * @param string $element Stack element
      * @return bool
      */
-    public static function is_url($element)
+    public static function is_url( $element )
     {
         return filter_var($element, FILTER_VALIDATE_URL) !== FALSE;
     }
 
-    public function action_plugin_act_do_minify($handler)
+    public function action_plugin_act_do_minify( $handler )
     {
         if (!isset($_GET['f'])) {
             header('Location: ' . Site::get_url('habari'));
@@ -205,16 +205,16 @@ class HabariMinify extends Plugin
         ini_set('zlib.output_compression', '0');
         set_include_path(dirname(__FILE__) . '/vendor' . PATH_SEPARATOR . get_include_path());
 
-        $opts['bubbleCssImports'] = false;
+        $opts['bubbleCssImports'] = FALSE;
         $opts['maxAge'] = (preg_match('/&\\d/', $_SERVER['QUERY_STRING'])) ? 31536000 : Options::get('minify__max_age'); // check for URI versioning
-        $opts['minApp']['groupsOnly'] = false;
+        $opts['minApp']['groupsOnly'] = FALSE;
         $opts['minApp']['maxFiles'] = 20;
         $opts['encodeOutput'] = Options::get('minify__encode_output');
 
         require 'Minify.php';
 
         Minify::$uploaderHoursBehind = 0;
-        Minify::setCache(HABARI_PATH . '/user/cache/', true);
+        Minify::setCache(HABARI_PATH . '/user/cache/', TRUE);
         Minify::serve('MinApp', $opts);
     }
 
@@ -236,12 +236,12 @@ class HabariMinify extends Plugin
 
         $options = array(
             'max_age' => 1800,
-            'encode_output' => false
+            'encode_output' => FALSE
         );
 
         foreach ($options as $option => $value) {
-            if (Options::get('minify__'.$option) == null) {
-                Options::set('minify__'.$option, $value);
+            if (Options::get("minify__$option") == NULL) {
+                Options::set("minify__$option", $value);
             }
         }
     }
