@@ -194,11 +194,6 @@ class HabariMinify extends Plugin
 
     public function action_plugin_act_do_minify( $handler )
     {
-        if (!isset($_GET['f'])) {
-            header('Location: ' . Site::get_url('habari'));
-            exit();
-        }
-
         $_SERVER['DOCUMENT_ROOT'] = HABARI_PATH;
 
         define('MINIFY_MIN_DIR', dirname(__FILE__) . '/vendor');
